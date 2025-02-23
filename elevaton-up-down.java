@@ -1,38 +1,91 @@
-import edu.wpi.first.wpilibj.TalonFX;  // Neo brushless motor control
-import edu.wpi.first.wpilibj.Joystick;  // For joystick input
-import edu.wpi.first.wpilibj.TimedRobot;  // Base class for robot code
+import edu.wpi.first.wpilibj.TalonFX;
+import edu.wpi.first.wpilibj.Joystick;
+import edu.wpi.first.wpilibj.TimedRobot;
+import edu.wpi.first.math.controller.PIDController;
 
 public class Robot extends TimedRobot {
-
-    // Define the Neo brushless motors for the elevator
-    private TalonFX elevatorMotor1; // Elevator motor 1
-    private TalonFX elevatorMotor2; // Elevator motor 2
-
-    // Joystick for controlling the elevator movement
-    private Joystick joystick; // Joystick is on port 0 by default
-
+    private TalonFX elevatorMotor1;
+    private TalonFX elevatorMotor2;
+    private Joystick joystick;
+    
+    // Constants
+    private static final double MINHEIGHT = 0; // inches
+    private static final double MAXHEIGHT = 40;
+    
+    // PID constants //TODO fix values
+    private static final double kP = 0.0;
+    private static final double kI = 0.0;
+    private static final double kD = 0.0;
+    
+    // PID controller
+    private PIDController pidController;
+    
+    // Tolerance for considering position reached
+    private static final double POSITION_TOLERANCE = 0.5; // inches
+    
     @Override
     public void robotInit() {
-        // Initialize the elevator motors
-        elevatorMotor1 = new TalonFX(9); // Elevator motor 1 on port 9
-        elevatorMotor2 = new TalonFX(10); // Elevator motor 2 on port 10
-
-        // Initialize the joystick (port 0 by default if no port is specified)
-        joystick = new Joystick(0); // Joystick on port 0
+        elevatorMotor1 = new TalonFX(9);
+        elevatorMotor2 = new TalonFX(10);
+        joystick = new Joystick(0);
+        
+        // Initialize PID controller
+        pidController = new PIDController(kP, kI, kD);
+        pidController.setTolerance(POSITION_TOLERANCE);
+        
+        // Reset encoder positions
+        elevatorMotor1.setSelectedSensorPosition(0);
     }
-
+    
+    private double getElevatorPosition() {
+        // Convert encoder ticks to inches - need to adjust this conversion factor
+        double TICKS_PER_INCH = 4096.0/(.184/*link length*/ * 14/*links per rotation*/ * 1.75 /*cascading multiplier*/; //TODO fix these numbers
+        return elevatorMotor1.getSelectedSensorPosition() / TICKS_PER_INCH;
+    }
+    
+    public void elevatorControl(double targetPosition) {
+        // Clamp target position to valid range
+        targetPosition = Math.min(Math.max(targetPosition, MINHEIGHT), MAXHEIGHT);
+        
+        // Get current position
+        double currentPosition = getElevatorPosition();
+        
+        // Calculate PID output
+        double pidOutput = pidController.calculate(currentPosition, targetPosition);
+        
+        // Apply output to motors if within height limits
+        if ((currentPosition <= MINHEIGHT && pidOutput < 0) || 
+            (currentPosition >= MAXHEIGHT && pidOutput > 0)) {
+            elevatorMotor1.set(0);
+            elevatorMotor2.set(0);
+        } else {
+            elevatorMotor1.set(pidOutput);
+            elevatorMotor2.set(-pidOutput);
+        }
+    }
+    
+    public void manualControl(double speed) {
+        double currentPosition = getElevatorPosition();
+        
+        // Prevent movement beyond limits
+        if ((currentPosition <= MINHEIGHT && speed < 0) || 
+            (currentPosition >= MAXHEIGHT && speed > 0)) {
+            elevatorMotor1.set(0);
+            elevatorMotor2.set(0);
+        } else {
+            elevatorMotor1.set(speed);
+            elevatorMotor2.set(-speed);
+        }
+    }
+    
     @Override
     public void teleopPeriodic() {
-        // Read the joystick Y-axis value (used for elevator control)
-        double elevatorSpeed = joystick.getRawAxis(1); // Y-axis controls elevator movement
-
-        // Apply a deadzone to avoid unintended motor movements due to slight joystick drift
+        double elevatorSpeed = joystick.getRawAxis(1);
+        
+        // Apply deadzone
         if (Math.abs(elevatorSpeed) < 0.1) {
-            elevatorSpeed = 0; // Stop elevator motors if joystick is in the deadzone
+            elevatorSpeed = 0;
         }
-
-        // Set both elevator motors to the joystick input (up or down)
-        elevatorMotor1.set(elevatorSpeed); // Set elevator motor 1
-        elevatorMotor2.set(elevatorSpeed); // Set elevator motor 2
+        
     }
 }
