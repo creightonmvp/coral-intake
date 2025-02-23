@@ -1,91 +1,138 @@
-import edu.wpi.first.wpilibj.DigitalInput;  // For IR sensors
-import edu.wpi.first.wpilibj.TalonFX;  // Neo brushless motor control
-import edu.wpi.first.wpilibj.Timer;  // For controlling speed
-import edu.wpi.first.wpilibj.TimedRobot;  // Base class for robot code
+public class ElevatorControl {
 
-public class Robot extends TimedRobot {
+    private boolean isElevatorEnabled;
+    private boolean isMotorRunning;
 
-    // Define the digital input pins for the IR sensors
-    private DigitalInput irSensor1; // IR sensor 1
-    private DigitalInput irSensor2; // IR sensor 2
-    
-    // Define the Neo brushless motor
-    private TalonFX neoMotor;
-    
-    // Define the elevator motors
-    private TalonFX elevatorMotor1;
-    private TalonFX elevatorMotor2;
+    // Simulating IR sensor states
+    private boolean irSensor1Broken;
+    private boolean irSensor2Broken;
 
-    // Control variables
-    private double motorSpeed = 0.5; // Default speed for the Neo motor
+    // Ports for the IR sensors and Neo brushless motors
+    private int irSensor1Port;
+    private int irSensor2Port;
+    private int elevatorMotor1Port;
+    private int elevatorMotor2Port;
+    private int coralIntakeMotorPort;
 
-    @Override
-    public void robotInit() {
-        // Initialize IR sensors (connect to the correct digital input pins)
-        irSensor1 = new DigitalInput(40); // IR sensor 1 on port 40
-        irSensor2 = new DigitalInput(41); // IR sensor 2 on port 41
+    // Placeholder for Neo brushless motor controls (replace with actual motor code)
+    private NeoBrushlessMotor elevatorMotor1;
+    private NeoBrushlessMotor elevatorMotor2;
+    private NeoBrushlessMotor coralIntakeMotor;
 
-        // Initialize Neo brushless motor
-        neoMotor = new TalonFX(11); // Assuming motor is connected to port 0
+    public ElevatorControl(int irSensor1Port, int irSensor2Port, int elevatorMotor1Port, int elevatorMotor2Port, int coralIntakeMotorPort) {
+        this.isElevatorEnabled = true; // Elevator starts enabled
+        this.isMotorRunning = false;
+        this.irSensor1Broken = false;
+        this.irSensor2Broken = false;
 
-        // Initialize elevator motors (assuming two motors for elevator control)
-        elevatorMotor1 = new TalonFX(9); // Elevator motor 1 on port 9
-        elevatorMotor2 = new TalonFX(10); // Elevator motor 2 on port 10
+        this.irSensor1Port = irSensor1Port;
+        this.irSensor2Port = irSensor2Port;
+        this.elevatorMotor1Port = elevatorMotor1Port;
+        this.elevatorMotor2Port = elevatorMotor2Port;
+        this.coralIntakeMotorPort = coralIntakeMotorPort;
+
+        this.elevatorMotor1 = new NeoBrushlessMotor(elevatorMotor1Port); // Initialize the first elevator motor
+        this.elevatorMotor2 = new NeoBrushlessMotor(elevatorMotor2Port); // Initialize the second elevator motor
+        this.coralIntakeMotor = new NeoBrushlessMotor(coralIntakeMotorPort); // Initialize the coral intake motor
     }
 
-    @Override
-    public void teleopPeriodic() {
-        // Logic for IR Sensor 1
-        if (irSensor1.get()) {  // When Sensor 1 detects an object (beam is broken)
-            // Disable the elevator motors
-            elevatorMotor1.set(0);
-            elevatorMotor2.set(0);
+    // Method to simulate the IR sensor input (using ports)
+    public void setIrSensor1Broken(boolean state) {
+        irSensor1Broken = state;
+        System.out.println("IR Sensor 1 (Port " + irSensor1Port + ") broken: " + state);
+        checkSensors();
+    }
 
-            // Enable the Neo brushless motor to spin at controlled speed
-            neoMotor.set(motorSpeed);
-        } else {  // When Sensor 1 is clear (beam is not broken)
-            // Enable the elevator motors to move (can adjust speed or behavior)
-            elevatorMotor1.set(0.5);  // Set desired speed for the elevator
-            elevatorMotor2.set(0.5);
+    public void setIrSensor2Broken(boolean state) {
+        irSensor2Broken = state;
+        System.out.println("IR Sensor 2 (Port " + irSensor2Port + ") broken: " + state);
+        checkSensors();
+    }
 
-            // Stop the Neo brushless motor (as no object is detected)
-            neoMotor.set(0);
+    // Check sensors and take action
+    private void checkSensors() {
+        if (irSensor1Broken) {
+            // First IR sensor is broken, disable the elevator and start the coral intake motor
+            isElevatorEnabled = false;
+            startCoralIntakeMotor();
         }
 
-        // Logic for IR Sensor 2
-        if (irSensor2.get()) {  // When Sensor 2 detects an object (beam is broken)
-            // Disable the elevator motors
-            elevatorMotor1.set(0);
-            elevatorMotor2.set(0);
-
-            // Enable the Neo brushless motor to spin at controlled speed
-            neoMotor.set(motorSpeed);
-        } else {  // When Sensor 2 is clear (beam is not broken)
-            // Enable the elevator motors to move
-            elevatorMotor1.set(0.5);  // Set desired speed for the elevator
-            elevatorMotor2.set(0.5);
-
-            // Stop the Neo brushless motor
-            neoMotor.set(0);
+        if (irSensor2Broken && !irSensor1Broken) {
+            // Second sensor is broken, keep everything the same
+            // Elevator stays disabled, and the coral intake motor continues running
+            // No action needed, everything stays the same
         }
 
-        // Optionally, you can adjust the Neo motor speed dynamically
-        // using joystick or buttons (for manual control)
-        if (isButtonPressed()) {
-            motorSpeed = adjustMotorSpeed();  // Dynamically adjust speed
-            neoMotor.set(motorSpeed);
+        if (!irSensor1Broken && !irSensor2Broken) {
+            // Both IR sensors are enabled, re-enable the elevator and stop the coral intake motor
+            isElevatorEnabled = true;
+            stopCoralIntakeMotor();
         }
     }
 
-    // Function to check if a button is pressed (to control motor speed manually)
-    private boolean isButtonPressed() {
-        // Implement your logic here, for example, checking a joystick button
-        return false;  // Just an example placeholder
+    // Start the coral intake motor
+    private void startCoralIntakeMotor() {
+        if (!isMotorRunning) {
+            coralIntakeMotor.start();  // Start the coral intake motor
+            isMotorRunning = true;
+            System.out.println("Coral intake motor started on port " + coralIntakeMotorPort);
+        }
     }
 
-    // Function to adjust motor speed (can be used with a joystick for dynamic control)
-    private double adjustMotorSpeed() {
-        // Example: Adjust speed based on joystick position or button presses
-        return 0.75;  // Just an example to set speed dynamically
+    // Stop the coral intake motor
+    private void stopCoralIntakeMotor() {
+        if (isMotorRunning) {
+            coralIntakeMotor.stop();  // Stop the coral intake motor
+            isMotorRunning = false;
+            System.out.println("Coral intake motor stopped on port " + coralIntakeMotorPort);
+        }
+    }
+
+    // Method to check if the elevator is enabled
+    public boolean isElevatorEnabled() {
+        return isElevatorEnabled;
+    }
+
+    // Placeholder Neo brushless motor class (replace with actual motor API)
+    class NeoBrushlessMotor {
+        private int motorPort;
+
+        public NeoBrushlessMotor(int motorPort) {
+            this.motorPort = motorPort;
+        }
+
+        public void start() {
+            // Motor starting logic (interface with actual motor hardware)
+            System.out.println("Motor on port " + motorPort + " is now running.");
+        }
+
+        public void stop() {
+            // Motor stopping logic
+            System.out.println("Motor on port " + motorPort + " has stopped.");
+        }
+    }
+
+    public static void main(String[] args) {
+        // Specify the ports for the IR sensors and the Neo brushless motors
+        int irSensor1Port = 40;  // Port 40 for the first IR sensor
+        int irSensor2Port = 41;  // Port 41 for the second IR sensor
+        int elevatorMotor1Port = 9;  // Port 9 for the first elevator motor
+        int elevatorMotor2Port = 10;  // Port 10 for the second elevator motor
+        int coralIntakeMotorPort = 11;  // Port 11 for the coral intake motor
+
+        ElevatorControl elevatorControl = new ElevatorControl(irSensor1Port, irSensor2Port, elevatorMotor1Port, elevatorMotor2Port, coralIntakeMotorPort);
+
+        // Simulate first sensor broken
+        elevatorControl.setIrSensor1Broken(true);  // Elevator disabled and coral intake motor starts
+        System.out.println("Elevator enabled: " + elevatorControl.isElevatorEnabled());
+
+        // Simulate second sensor broken (no action needed)
+        elevatorControl.setIrSensor2Broken(true);
+        System.out.println("Elevator enabled: " + elevatorControl.isElevatorEnabled());
+
+        // Simulate both sensors enabled (re-enable elevator and stop coral intake motor)
+        elevatorControl.setIrSensor1Broken(false);
+        elevatorControl.setIrSensor2Broken(false);
+        System.out.println("Elevator enabled: " + elevatorControl.isElevatorEnabled());
     }
 }
