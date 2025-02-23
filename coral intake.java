@@ -7,16 +7,16 @@ public class ElevatorControl {
     private boolean irSensor1Broken;
     private boolean irSensor2Broken;
 
-    // Ports for the IR sensors and Neo brushless motors
+    // Ports for the IR sensors and motors
     private int irSensor1Port;
     private int irSensor2Port;
     private int elevatorMotor1Port;
     private int elevatorMotor2Port;
     private int coralIntakeMotorPort;
 
-    // Placeholder for Neo brushless motor controls (replace with actual motor code)
-    private NeoBrushlessMotor elevatorMotor1;
-    private NeoBrushlessMotor elevatorMotor2;
+    // Placeholder for Rev Max planetary motors (elevator motors) and Neo brushless motor (coral intake)
+    private RevMaxPlanetaryMotor elevatorMotor1;
+    private RevMaxPlanetaryMotor elevatorMotor2;
     private NeoBrushlessMotor coralIntakeMotor;
 
     public ElevatorControl(int irSensor1Port, int irSensor2Port, int elevatorMotor1Port, int elevatorMotor2Port, int coralIntakeMotorPort) {
@@ -31,8 +31,8 @@ public class ElevatorControl {
         this.elevatorMotor2Port = elevatorMotor2Port;
         this.coralIntakeMotorPort = coralIntakeMotorPort;
 
-        this.elevatorMotor1 = new NeoBrushlessMotor(elevatorMotor1Port); // Initialize the first elevator motor
-        this.elevatorMotor2 = new NeoBrushlessMotor(elevatorMotor2Port); // Initialize the second elevator motor
+        this.elevatorMotor1 = new RevMaxPlanetaryMotor(elevatorMotor1Port); // Initialize the first elevator motor
+        this.elevatorMotor2 = new RevMaxPlanetaryMotor(elevatorMotor2Port); // Initialize the second elevator motor
         this.coralIntakeMotor = new NeoBrushlessMotor(coralIntakeMotorPort); // Initialize the coral intake motor
     }
 
@@ -55,6 +55,7 @@ public class ElevatorControl {
             // First IR sensor is broken, disable the elevator and start the coral intake motor
             isElevatorEnabled = false;
             startCoralIntakeMotor();
+            stopElevatorMotors(); // Disable elevator motors
         }
 
         if (irSensor2Broken && !irSensor1Broken) {
@@ -67,10 +68,11 @@ public class ElevatorControl {
             // Both IR sensors are enabled, re-enable the elevator and stop the coral intake motor
             isElevatorEnabled = true;
             stopCoralIntakeMotor();
+            enableElevatorMotors(); // Re-enable the elevator motors
         }
     }
 
-    // Start the coral intake motor
+    // Start the coral intake motor (Neo brushless motor)
     private void startCoralIntakeMotor() {
         if (!isMotorRunning) {
             coralIntakeMotor.start();  // Start the coral intake motor
@@ -88,9 +90,42 @@ public class ElevatorControl {
         }
     }
 
+    // Disable the elevator motors
+    private void stopElevatorMotors() {
+        elevatorMotor1.stop();  // Stop the first elevator motor
+        elevatorMotor2.stop();  // Stop the second elevator motor
+        System.out.println("Elevator motors stopped.");
+    }
+
+    // Enable the elevator motors
+    private void enableElevatorMotors() {
+        elevatorMotor1.start();  // Start the first elevator motor
+        elevatorMotor2.start();  // Start the second elevator motor
+        System.out.println("Elevator motors enabled.");
+    }
+
     // Method to check if the elevator is enabled
     public boolean isElevatorEnabled() {
         return isElevatorEnabled;
+    }
+
+    // Placeholder Rev Max planetary motor class (replace with actual motor API)
+    class RevMaxPlanetaryMotor {
+        private int motorPort;
+
+        public RevMaxPlanetaryMotor(int motorPort) {
+            this.motorPort = motorPort;
+        }
+
+        public void start() {
+            // Motor starting logic (interface with actual motor hardware)
+            System.out.println("Rev Max motor on port " + motorPort + " is now running.");
+        }
+
+        public void stop() {
+            // Motor stopping logic
+            System.out.println("Rev Max motor on port " + motorPort + " has stopped.");
+        }
     }
 
     // Placeholder Neo brushless motor class (replace with actual motor API)
@@ -103,17 +138,17 @@ public class ElevatorControl {
 
         public void start() {
             // Motor starting logic (interface with actual motor hardware)
-            System.out.println("Motor on port " + motorPort + " is now running.");
+            System.out.println("Neo brushless motor on port " + motorPort + " is now running.");
         }
 
         public void stop() {
             // Motor stopping logic
-            System.out.println("Motor on port " + motorPort + " has stopped.");
+            System.out.println("Neo brushless motor on port " + motorPort + " has stopped.");
         }
     }
 
     public static void main(String[] args) {
-        // Specify the ports for the IR sensors and the Neo brushless motors
+        // Specify the ports for the IR sensors and the motors
         int irSensor1Port = 40;  // Port 40 for the first IR sensor
         int irSensor2Port = 41;  // Port 41 for the second IR sensor
         int elevatorMotor1Port = 9;  // Port 9 for the first elevator motor
